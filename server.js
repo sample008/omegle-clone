@@ -11,17 +11,16 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Upgraded queue: now an array of objects containing user data
 let waitingUsers = [];
 let totalOnline = 0;
 
+// Simple Spam & Link Filter List
+const BANNED_KEYWORDS = ['http://', 'https://', 'www.', '.com', '.net', '.org', 'buy premium'];
+
 io.on('connection', (socket) => {
     totalOnline++;
-    // Broadcast updated user count to EVERYONE online
     io.emit('update-user-count', totalOnline);
-    console.log('A user connected. Total online:', totalOnline);
 
-    // 1. Matchmaking with Interests
     socket.on('find-match', (interestsString) => {
         if (socket.currentRoom) {
             socket.to(socket.currentRoom).emit('stranger-disconnected');
@@ -29,28 +28,22 @@ io.on('connection', (socket) => {
             socket.currentRoom = null;
         }
 
-        // Clean up user tags into an array of lowercase words
         const userInterests = interestsString
             ? interestsString.toLowerCase().split(',').map(i => i.trim()).filter(i => i !== "")
             : [];
 
-        // Look for a match in the waiting list
         let matchIndex = -1;
-
         if (userInterests.length > 0) {
-            // Try to find someone who shares AT LEAST ONE interest
             matchIndex = waitingUsers.findIndex(stranger => {
                 return stranger.interests.some(interest => userInterests.includes(interest));
             });
         }
 
-        // If no interest match was found, grab the first available person (random match)
         if (matchIndex === -1 && waitingUsers.length > 0) {
             matchIndex = 0;
         }
 
         if (matchIndex !== -1) {
-            // Remove matched stranger from queue
             const strangerData = waitingUsers.splice(matchIndex, 1)[0];
             const strangerSocket = strangerData.socket;
 
@@ -63,36 +56,53 @@ io.on('connection', (socket) => {
 
             io.to(roomName).emit('matched');
         } else {
-            // No match found, push user to queue with their interests
-            waitingUsers.push({
-                socket: socket,
-                interests: userInterests
-            });
+            waitingUsers.push({ socket: socket, interests: userInterests });
             socket.emit('waiting');
         }
     });
 
-    // 2. Typing Indicators
+    // --- NEW: MODERATION FILTERS ---
+    socket.on('send-message', (text) => {
+        if (!socket.currentRoom) return;
+
+        // Check if message contains blocked links or spam phrases
+        const containsSpam = BANNED_KEYWORDS.some(keyword => text.toLowerCase().includes(keyword));
+
+        if (containsSpam) {
+            // Warn the sender, don't pass message to the stranger
+            socket.emit('system-warning', 'Links and advertising are not allowed here!');
+            console.log(`Blocked spam attempt from: ${socket.id}`);
+        } else {
+            // Safe message. Pass it along
+            socket.to(socket.currentRoom).emit('receive-message', text);
+        }
+    });
+
+    // --- NEW: HANDLING REPORTS ---
+    socket.on('report-stranger', () => {
+        if (socket.currentRoom) {
+            const roomToClose = socket.currentRoom;
+            
+            // Tell the rule breaker they've been flagged and disconnected
+            socket.to(roomToClose).emit('reported-notice');
+            socket.emit('system-warning', 'You reported the stranger. Finding you a new match...');
+
+            // Disconnect both from the room instantly
+            io.in(roomToClose).socketsLeave(roomToClose);
+            console.log(`Room ${roomToClose} closed due to user report.`);
+        }
+    });
+
     socket.on('typing', (isTyping) => {
         if (socket.currentRoom) {
             socket.to(socket.currentRoom).emit('stranger-typing', isTyping);
         }
     });
 
-    // 3. Message Passing
-    socket.on('send-message', (text) => {
-        if (socket.currentRoom) {
-            socket.to(socket.currentRoom).emit('receive-message', text);
-        }
-    });
-
-    // 4. Disconnect Handlers
     socket.on('disconnect', () => {
         totalOnline--;
         io.emit('update-user-count', totalOnline);
-        
         waitingUsers = waitingUsers.filter(item => item.socket.id !== socket.id);
-        
         if (socket.currentRoom) {
             socket.to(socket.currentRoom).emit('stranger-disconnected');
         }
