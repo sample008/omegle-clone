@@ -14,8 +14,13 @@ app.get('/', (req, res) => {
 let waitingUsers = [];
 let totalOnline = 0;
 
-// Simple Spam & Link Filter List
-const BANNED_KEYWORDS = ['http://', 'https://', 'www.', '.com', '.net', '.org', 'buy premium'];
+// --- EXPANDED MODERATION LIST ---
+// You can add any custom words or phrases inside these quotes, separated by commas!
+const BANNED_KEYWORDS = [
+    'http://', 'https://', 'www.', '.com', '.net', '.org', // Links
+    'spam-bot', 'buy premium', 'crypto scam',               // Promo spam
+    'jerk', 'loser', 'stupid'                              // Example toxic words (add your own!)
+];
 
 io.on('connection', (socket) => {
     totalOnline++;
@@ -61,35 +66,28 @@ io.on('connection', (socket) => {
         }
     });
 
-    // --- NEW: MODERATION FILTERS ---
     socket.on('send-message', (text) => {
         if (!socket.currentRoom) return;
 
-        // Check if message contains blocked links or spam phrases
-        const containsSpam = BANNED_KEYWORDS.some(keyword => text.toLowerCase().includes(keyword));
+        // Check if message contains ANY of the banned words or links
+        const containsBadBehavior = BANNED_KEYWORDS.some(keyword => text.toLowerCase().includes(keyword));
 
-        if (containsSpam) {
-            // Warn the sender, don't pass message to the stranger
-            socket.emit('system-warning', 'Links and advertising are not allowed here!');
-            console.log(`Blocked spam attempt from: ${socket.id}`);
+        if (containsBadBehavior) {
+            // Block message and warn the user
+            socket.emit('system-warning', 'Your message was blocked. Please keep the chat clean and link-free!');
+            console.log(`[FILTER] Blocked message from ${socket.id}: "${text}"`);
         } else {
-            // Safe message. Pass it along
+            // Message is clean, pass it to the stranger
             socket.to(socket.currentRoom).emit('receive-message', text);
         }
     });
 
-    // --- NEW: HANDLING REPORTS ---
     socket.on('report-stranger', () => {
         if (socket.currentRoom) {
             const roomToClose = socket.currentRoom;
-            
-            // Tell the rule breaker they've been flagged and disconnected
             socket.to(roomToClose).emit('reported-notice');
             socket.emit('system-warning', 'You reported the stranger. Finding you a new match...');
-
-            // Disconnect both from the room instantly
             io.in(roomToClose).socketsLeave(roomToClose);
-            console.log(`Room ${roomToClose} closed due to user report.`);
         }
     });
 
@@ -111,5 +109,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running perfectly`);
 });
