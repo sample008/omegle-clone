@@ -7,76 +7,99 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Tell the server to look at our folder to show the website
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// This queue holds users who are waiting for a match
+// Upgraded queue: now an array of objects containing user data
 let waitingUsers = [];
+let totalOnline = 0;
 
 io.on('connection', (socket) => {
-    console.log('A user connected:', socket.id);
+    totalOnline++;
+    // Broadcast updated user count to EVERYONE online
+    io.emit('update-user-count', totalOnline);
+    console.log('A user connected. Total online:', totalOnline);
 
-    // 1. When a user clicks "Next Stranger"
-    socket.on('find-match', () => {
-        // If the user was already chatting, make sure they leave their previous room
+    // 1. Matchmaking with Interests
+    socket.on('find-match', (interestsString) => {
         if (socket.currentRoom) {
             socket.to(socket.currentRoom).emit('stranger-disconnected');
             socket.leave(socket.currentRoom);
             socket.currentRoom = null;
         }
 
-        // Check if someone else is waiting in the queue
-        if (waitingUsers.length > 0) {
-            // Grab the waiting stranger
-            const strangerSocket = waitingUsers.shift();
+        // Clean up user tags into an array of lowercase words
+        const userInterests = interestsString
+            ? interestsString.toLowerCase().split(',').map(i => i.trim()).filter(i => i !== "")
+            : [];
 
-            // Create a unique room name for both of them
+        // Look for a match in the waiting list
+        let matchIndex = -1;
+
+        if (userInterests.length > 0) {
+            // Try to find someone who shares AT LEAST ONE interest
+            matchIndex = waitingUsers.findIndex(stranger => {
+                return stranger.interests.some(interest => userInterests.includes(interest));
+            });
+        }
+
+        // If no interest match was found, grab the first available person (random match)
+        if (matchIndex === -1 && waitingUsers.length > 0) {
+            matchIndex = 0;
+        }
+
+        if (matchIndex !== -1) {
+            // Remove matched stranger from queue
+            const strangerData = waitingUsers.splice(matchIndex, 1)[0];
+            const strangerSocket = strangerData.socket;
+
             const roomName = `room-${socket.id}-${strangerSocket.id}`;
-
-            // Put both users into the same room
             socket.join(roomName);
             strangerSocket.join(roomName);
 
-            // Remember what room they are in
             socket.currentRoom = roomName;
             strangerSocket.currentRoom = roomName;
 
-            // Tell both users they are successfully matched!
             io.to(roomName).emit('matched');
-            console.log(`Matched! Created: ${roomName}`);
         } else {
-            // Nobody is waiting, so put this user in the queue
-            waitingUsers.push(socket);
+            // No match found, push user to queue with their interests
+            waitingUsers.push({
+                socket: socket,
+                interests: userInterests
+            });
             socket.emit('waiting');
-            console.log(`User ${socket.id} added to the waiting queue.`);
         }
     });
 
-    // 2. When a user sends a text message
+    // 2. Typing Indicators
+    socket.on('typing', (isTyping) => {
+        if (socket.currentRoom) {
+            socket.to(socket.currentRoom).emit('stranger-typing', isTyping);
+        }
+    });
+
+    // 3. Message Passing
     socket.on('send-message', (text) => {
         if (socket.currentRoom) {
-            // Send the message to the OTHER person in the room
             socket.to(socket.currentRoom).emit('receive-message', text);
         }
     });
 
-    // 3. When a user closes their browser or tab
+    // 4. Disconnect Handlers
     socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
-        // Remove them from the waiting list if they were in it
-        waitingUsers = waitingUsers.filter(user => user.id !== socket.id);
+        totalOnline--;
+        io.emit('update-user-count', totalOnline);
         
-        // Notify their partner if they were in a chat
+        waitingUsers = waitingUsers.filter(item => item.socket.id !== socket.id);
+        
         if (socket.currentRoom) {
             socket.to(socket.currentRoom).emit('stranger-disconnected');
         }
     });
 });
 
-// Start the server on port 3000
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Server running perfectly on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });

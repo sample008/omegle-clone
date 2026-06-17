@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AnonChat | Talk to Strangers</title>
+    <title>AnonChat | Pro Edition</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
-            font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            font-family: '-apple-system', BlinkMacSystemFont, sans-serif; 
             background-color: #121212; 
             color: #e0e0e0; 
             display: flex; 
@@ -17,12 +17,34 @@
         header {
             background-color: #1f1f1f;
             padding: 15px 20px;
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             border-bottom: 1px solid #333;
-            font-size: 24px;
-            font-weight: bold;
-            color: #ff9800;
         }
+        .logo { font-size: 22px; font-weight: bold; color: #ff9800; }
+        .counter { background: #2a2a2a; padding: 6px 12px; border-radius: 20px; font-size: 14px; border: 1px solid #444; }
+        .counter span { color: #4caf50; font-weight: bold; }
+        
+        /* New Interests Bar */
+        .interests-bar {
+            background-color: #1a1a1a;
+            padding: 10px 20px;
+            border-bottom: 1px solid #2a2a2a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .interests-bar input {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            flex: 1;
+            font-size: 14px;
+        }
+
         #chat-box { 
             flex: 1; 
             padding: 20px; 
@@ -32,79 +54,50 @@
             flex-direction: column;
             gap: 12px;
         }
-        .msg {
-            max-width: 70%;
-            padding: 12px 16px;
-            border-radius: 18px;
-            font-size: 16px;
-            line-height: 1.4;
-            word-wrap: break-word;
-        }
-        .msg.you {
-            background-color: #ff9800;
-            color: #000;
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-        }
-        .msg.stranger {
-            background-color: #2a2a2a;
-            color: #fff;
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-        }
-        .msg.system {
-            background-color: transparent;
+        .msg { max-width: 70%; padding: 12px 16px; border-radius: 18px; font-size: 16px; line-height: 1.4; word-wrap: break-word; }
+        .msg.you { background-color: #ff9800; color: #000; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .msg.stranger { background-color: #2a2a2a; color: #fff; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .msg.system { background-color: transparent; color: #888; font-style: italic; align-self: center; text-align: center; font-size: 14px; }
+        
+        /* Typing indicator styling */
+        #typing-status {
+            padding-left: 20px;
             color: #888;
-            font-style: italic;
-            align-self: center;
-            text-align: center;
             font-size: 14px;
+            font-style: italic;
+            height: 20px;
+            background-color: #181818;
         }
-        .input-area { 
-            display: flex; 
-            padding: 15px; 
-            background-color: #1f1f1f; 
-            gap: 10px;
-            border-top: 1px solid #333;
-        }
-        input { 
-            flex: 1; 
-            padding: 15px; 
-            font-size: 16px; 
-            border: 1px solid #444; 
-            background-color: #2a2a2a; 
-            color: #fff; 
-            border-radius: 8px;
-            outline: none;
-        }
-        input:disabled { background-color: #1a1a1a; color: #555; }
-        button { 
-            padding: 0 25px; 
-            font-size: 16px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            border: none; 
-            border-radius: 8px;
-            transition: background 0.2s;
-        }
+
+        .input-area { display: flex; padding: 15px; background-color: #1f1f1f; gap: 10px; border-top: 1px solid #333; }
+        .chat-input { flex: 1; padding: 15px; font-size: 16px; border: 1px solid #444; background-color: #2a2a2a; color: #fff; border-radius: 8px; outline: none; }
+        button { padding: 0 25px; font-size: 16px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; }
         #skip-btn { background-color: #e53935; color: white; }
-        #skip-btn:hover { background-color: #b71c1c; }
         #send-btn { background-color: #4caf50; color: white; }
-        #send-btn:hover { background-color: #2e7d32; }
         #send-btn:disabled { background-color: #224424; color: #555; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
-    <header>AnonChat 💬</header>
+    <header>
+        <div class="logo">AnonChat 💬</div>
+        <div class="counter">Online: <span id="user-count">1</span></div>
+    </header>
+
+    <div class="interests-bar">
+        <label for="interest-input" style="font-size: 14px; color: #aaa;">Interests (Optional):</label>
+        <input type="text" id="interest-input" placeholder="e.g. gaming, movies, anime (separate with commas)">
+    </div>
 
     <div id="chat-box">
-        <div class="msg system">Click "Next Stranger" to find someone to talk to...</div>
+        <div class="msg system">Add your interests above and click "Next Stranger" to begin!</div>
     </div>
+
+    <div id="typing-status"></div>
 
     <div class="input-area">
         <button id="skip-btn" onclick="skipUser()">Next Stranger</button>
-        <input type="text" id="message-input" placeholder="Type a message..." disabled onkeypress="handleKeyPress(event)">
+        <input type="text" id="message-input" class="chat-input" placeholder="Type a message..." disabled onkeypress="handleKeyPress(event)" oninput="notifyTyping()">
         <button id="send-btn" onclick="sendMessage()" disabled>Send</button>
     </div>
 
@@ -113,7 +106,12 @@
         const socket = io();
         const chatBox = document.getElementById('chat-box');
         const messageInput = document.getElementById('message-input');
+        const interestInput = document.getElementById('interest-input');
+        const userCount = document.getElementById('user-count');
+        const typingStatus = document.getElementById('typing-status');
         const sendBtn = document.getElementById('send-btn');
+
+        let typingTimeout;
 
         function appendMessage(text, type) {
             const msgDiv = document.createElement('div');
@@ -124,10 +122,13 @@
         }
 
         function skipUser() {
-            appendMessage("Looking for a stranger...", "system");
+            appendMessage("Looking for a stranger with similar interests...", "system");
             messageInput.disabled = true;
             sendBtn.disabled = true;
-            socket.emit('find-match');
+            typingStatus.innerHTML = "";
+            
+            // Pass interest values to server
+            socket.emit('find-match', interestInput.value);
         }
 
         function sendMessage() {
@@ -136,6 +137,9 @@
                 appendMessage(`<strong>You:</strong> ${text}`, "you");
                 messageInput.value = "";
                 socket.emit('send-message', text);
+                
+                // Instantly stop typing indicator when message is sent
+                socket.emit('typing', false);
             }
         }
 
@@ -143,12 +147,29 @@
             if (e.key === 'Enter') sendMessage();
         }
 
+        // Fire a 'typing' alert to backend when user types
+        function notifyTyping() {
+            socket.emit('typing', true);
+            
+            // If user stops typing for 1.5 seconds, remove the indicator
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                socket.emit('typing', false);
+            }, 1500);
+        }
+
+        // --- GLOBAL LISTENERS ---
+
+        socket.on('update-user-count', (count) => {
+            userCount.innerText = count;
+        });
+
         socket.on('waiting', () => {
-            appendMessage("Waiting for someone to join the lobby...", "system");
+            appendMessage("Waiting for a match to log in...", "system");
         });
 
         socket.on('matched', () => {
-            appendMessage("Connected! You are now chatting with a random stranger.", "system");
+            appendMessage("Connected! Say hello.", "system");
             messageInput.disabled = false;
             sendBtn.disabled = false;
             messageInput.focus();
@@ -158,10 +179,15 @@
             appendMessage(`<strong>Stranger:</strong> ${text}`, "stranger");
         });
 
+        socket.on('stranger-typing', (isTyping) => {
+            typingStatus.innerHTML = isTyping ? "Stranger is typing..." : "";
+        });
+
         socket.on('stranger-disconnected', () => {
             appendMessage("Stranger has disconnected.", "system");
             messageInput.disabled = true;
             sendBtn.disabled = true;
+            typingStatus.innerHTML = "";
         });
     </script>
 </body>
