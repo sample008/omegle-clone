@@ -3,90 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AnonChat | Pro Edition</title>
+    <title>AnonChat | Ultra Edition</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; transition: background-color 0.3s, color 0.3s; }
+        
+        /* CSS Variables to handle themes seamlessly */
+        :root {
+            --bg-body: #121212;
+            --bg-surface: #1f1f1f;
+            --bg-chat: #181818;
+            --bg-input: #2a2a2a;
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+            --border-color: #333;
+            --stranger-msg: #2a2a2a;
+            --stranger-text: #fff;
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f0f2f5;
+            --bg-surface: #ffffff;
+            --bg-chat: #ffffff;
+            --bg-input: #f0f2f5;
+            --text-main: #1c1e21;
+            --text-muted: #65676b;
+            --border-color: #e4e6eb;
+            --stranger-msg: #e4e6eb;
+            --stranger-text: #1c1e21;
+        }
+
         body { 
             font-family: '-apple-system', BlinkMacSystemFont, sans-serif; 
-            background-color: #121212; 
-            color: #e0e0e0; 
+            background-color: var(--bg-body); 
+            color: var(--text-main); 
             display: flex; 
             flex-direction: column; 
             height: 100vh; 
         }
         header {
-            background-color: #1f1f1f;
+            background-color: var(--bg-surface);
             padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid var(--border-color);
         }
         .logo { font-size: 22px; font-weight: bold; color: #ff9800; }
-        .counter { background: #2a2a2a; padding: 6px 12px; border-radius: 20px; font-size: 14px; border: 1px solid #444; }
+        .controls { display: flex; align-items: center; gap: 15px; }
+        .counter { background: var(--bg-input); padding: 6px 12px; border-radius: 20px; font-size: 14px; border: 1px solid var(--border-color); }
         .counter span { color: #4caf50; font-weight: bold; }
         
-        /* New Interests Bar */
+        /* Theme Toggle Button */
+        .theme-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 5px; }
+
         .interests-bar {
-            background-color: #1a1a1a;
+            background-color: var(--bg-surface);
             padding: 10px 20px;
-            border-bottom: 1px solid #2a2a2a;
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             gap: 10px;
         }
         .interests-bar input {
-            background: #2a2a2a;
-            border: 1px solid #444;
-            color: white;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
             padding: 8px 12px;
             border-radius: 6px;
             flex: 1;
             font-size: 14px;
+            outline: none;
         }
 
         #chat-box { 
             flex: 1; 
             padding: 20px; 
             overflow-y: auto; 
-            background-color: #181818;
+            background-color: var(--bg-chat);
             display: flex;
             flex-direction: column;
             gap: 12px;
         }
         .msg { max-width: 70%; padding: 12px 16px; border-radius: 18px; font-size: 16px; line-height: 1.4; word-wrap: break-word; }
         .msg.you { background-color: #ff9800; color: #000; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .msg.stranger { background-color: #2a2a2a; color: #fff; align-self: flex-start; border-bottom-left-radius: 4px; }
-        .msg.system { background-color: transparent; color: #888; font-style: italic; align-self: center; text-align: center; font-size: 14px; }
+        .msg.stranger { background-color: var(--stranger-msg); color: var(--stranger-text); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .msg.system { background-color: transparent; color: var(--text-muted); font-style: italic; align-self: center; text-align: center; font-size: 14px; }
         
-        /* Typing indicator styling */
         #typing-status {
             padding-left: 20px;
-            color: #888;
+            color: var(--text-muted);
             font-size: 14px;
             font-style: italic;
             height: 20px;
-            background-color: #181818;
+            background-color: var(--bg-chat);
         }
 
-        .input-area { display: flex; padding: 15px; background-color: #1f1f1f; gap: 10px; border-top: 1px solid #333; }
-        .chat-input { flex: 1; padding: 15px; font-size: 16px; border: 1px solid #444; background-color: #2a2a2a; color: #fff; border-radius: 8px; outline: none; }
+        .input-area { display: flex; padding: 15px; background-color: var(--bg-surface); gap: 10px; border-top: 1px solid var(--border-color); position: relative; }
+        .chat-input { flex: 1; padding: 15px; font-size: 16px; border: 1px solid var(--border-color); background-color: var(--bg-input); color: var(--text-main); border-radius: 8px; outline: none; }
+        
+        /* Action Buttons */
         button { padding: 0 25px; font-size: 16px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; }
         #skip-btn { background-color: #e53935; color: white; }
         #send-btn { background-color: #4caf50; color: white; }
         #send-btn:disabled { background-color: #224424; color: #555; cursor: not-allowed; }
+        
+        /* Emoji Drawer Design */
+        .emoji-trigger { background: none; font-size: 22px; cursor: pointer; padding: 0 5px; }
+        .emoji-box {
+            position: absolute;
+            bottom: 80px;
+            right: 120px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            display: none;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+        .emoji-box span { font-size: 20px; cursor: pointer; user-select: none; }
+        .emoji-box span:hover { transform: scale(1.2); }
     </style>
 </head>
 <body>
 
     <header>
         <div class="logo">AnonChat 💬</div>
-        <div class="counter">Online: <span id="user-count">1</span></div>
+        <div class="controls">
+            <button class="theme-btn" id="theme-toggle" onclick="toggleTheme()">☀️</button>
+            <div class="counter">Online: <span id="user-count">1</span></div>
+        </div>
     </header>
 
     <div class="interests-bar">
-        <label for="interest-input" style="font-size: 14px; color: #aaa;">Interests (Optional):</label>
-        <input type="text" id="interest-input" placeholder="e.g. gaming, movies, anime (separate with commas)">
+        <label for="interest-input" style="font-size: 14px; color: var(--text-muted);">Interests:</label>
+        <input type="text" id="interest-input" placeholder="e.g. gaming, movies, anime">
     </div>
 
     <div id="chat-box">
@@ -97,6 +150,21 @@
 
     <div class="input-area">
         <button id="skip-btn" onclick="skipUser()">Next Stranger</button>
+        <button class="emoji-trigger" id="emoji-btn" onclick="toggleEmojiBox()" disabled>😀</button>
+        
+        <div class="emoji-box" id="emoji-box">
+            <span onclick="addEmoji('😀')">😀</span>
+            <span onclick="addEmoji('😂')">😂</span>
+            <span onclick="addEmoji('🔥')">🔥</span>
+            <span onclick="addEmoji('👍')">👍</span>
+            <span onclick="addEmoji('💯')">💯</span>
+            <span onclick="addEmoji('😮')">😮</span>
+            <span onclick="addEmoji('😭')">😭</span>
+            <span onclick="addEmoji('💀')">💀</span>
+            <span onclick="addEmoji('❤️')">❤️</span>
+            <span onclick="addEmoji('👋')">👋</span>
+        </div>
+
         <input type="text" id="message-input" class="chat-input" placeholder="Type a message..." disabled onkeypress="handleKeyPress(event)" oninput="notifyTyping()">
         <button id="send-btn" onclick="sendMessage()" disabled>Send</button>
     </div>
@@ -110,8 +178,35 @@
         const userCount = document.getElementById('user-count');
         const typingStatus = document.getElementById('typing-status');
         const sendBtn = document.getElementById('send-btn');
+        const emojiBtn = document.getElementById('emoji-btn');
+        const emojiBox = document.getElementById('emoji-box');
+        const themeToggle = document.getElementById('theme-toggle');
 
         let typingTimeout;
+
+        // Theme Toggle Functionality
+        function toggleTheme() {
+            const currentTheme = document.body.getAttribute('data-theme');
+            if (currentTheme === 'light') {
+                document.body.removeAttribute('data-theme');
+                themeToggle.innerText = "☀️";
+            } else {
+                document.body.setAttribute('data-theme', 'light');
+                themeToggle.innerText = "🌙";
+            }
+        }
+
+        // Emoji Functionality
+        function toggleEmojiBox() {
+            emojiBox.style.display = emojiBox.style.display === 'grid' ? 'none' : 'grid';
+        }
+
+        function addEmoji(emoji) {
+            messageInput.value += emoji;
+            emojiBox.style.display = 'none';
+            messageInput.focus();
+            notifyTyping();
+        }
 
         function appendMessage(text, type) {
             const msgDiv = document.createElement('div');
@@ -125,9 +220,9 @@
             appendMessage("Looking for a stranger with similar interests...", "system");
             messageInput.disabled = true;
             sendBtn.disabled = true;
+            emojiBtn.disabled = true;
             typingStatus.innerHTML = "";
-            
-            // Pass interest values to server
+            emojiBox.style.display = 'none';
             socket.emit('find-match', interestInput.value);
         }
 
@@ -137,8 +232,6 @@
                 appendMessage(`<strong>You:</strong> ${text}`, "you");
                 messageInput.value = "";
                 socket.emit('send-message', text);
-                
-                // Instantly stop typing indicator when message is sent
                 socket.emit('typing', false);
             }
         }
@@ -147,46 +240,41 @@
             if (e.key === 'Enter') sendMessage();
         }
 
-        // Fire a 'typing' alert to backend when user types
         function notifyTyping() {
             socket.emit('typing', true);
-            
-            // If user stops typing for 1.5 seconds, remove the indicator
             clearTimeout(typingTimeout);
             typingTimeout = setTimeout(() => {
                 socket.emit('typing', false);
             }, 1500);
         }
 
+        // Close emoji box if clicking outside
+        document.addEventListener('click', (e) => {
+            if (!emojiBox.contains(e.target) && e.target !== emojiBtn) {
+                emojiBox.style.display = 'none';
+            }
+        });
+
         // --- GLOBAL LISTENERS ---
-
-        socket.on('update-user-count', (count) => {
-            userCount.innerText = count;
-        });
-
-        socket.on('waiting', () => {
-            appendMessage("Waiting for a match to log in...", "system");
-        });
-
+        socket.on('update-user-count', (count) => { userCount.innerText = count; });
+        socket.on('waiting', () => { appendMessage("Waiting for a match...", "system"); });
+        
         socket.on('matched', () => {
             appendMessage("Connected! Say hello.", "system");
             messageInput.disabled = false;
             sendBtn.disabled = false;
+            emojiBtn.disabled = false;
             messageInput.focus();
         });
 
-        socket.on('receive-message', (text) => {
-            appendMessage(`<strong>Stranger:</strong> ${text}`, "stranger");
-        });
-
-        socket.on('stranger-typing', (isTyping) => {
-            typingStatus.innerHTML = isTyping ? "Stranger is typing..." : "";
-        });
+        socket.on('receive-message', (text) => { appendMessage(`<strong>Stranger:</strong> ${text}`, "stranger"); });
+        socket.on('stranger-typing', (isTyping) => { typingStatus.innerHTML = isTyping ? "Stranger is typing..." : ""; });
 
         socket.on('stranger-disconnected', () => {
             appendMessage("Stranger has disconnected.", "system");
             messageInput.disabled = true;
             sendBtn.disabled = true;
+            emojiBtn.disabled = true;
             typingStatus.innerHTML = "";
         });
     </script>
